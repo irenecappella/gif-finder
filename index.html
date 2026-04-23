@@ -6,35 +6,23 @@
   FILES
   -----
   index.html   - this file (markup + README)
-  styles.css   - all visual styles (mobile-first)
-  app.js       - all logic (state, rendering, Google Sheets logging)
-  products.js  - product list (edit this to add/remove products)
+  styles.css   - all visual styles
+  app.js       - app state, view logic, swipe actions, and Google Sheets logging
+  products.js  - product list
 
   HOW TO ADD PRODUCTS
   -------------------
   Edit products.js. Each item in the PRODUCT_LIST array needs:
     { id: "unique-id", title: "Name", url: "https://...", image: "https://..." }
-  IDs must be stable - never change an id once set or progress breaks.
-  New products are automatically shown to users who haven't seen them.
-  Works when opened directly from the filesystem (no server needed).
+  IDs must stay stable so saved progress and likes continue to work.
 
-  HOW TO DEPLOY TO GITHUB PAGES
-  -----------------------------
-  1. Push this repo to GitHub (main branch).
-  2. Go to repo Settings -> Pages.
-  3. Set Source to "Deploy from a branch", pick main / root.
-  4. Save. GitHub Pages URL will appear (e.g. https://yourname.github.io/repo/).
-  5. Share that URL with the person using the app.
-  HOW TO SET UP GOOGLE APPS SCRIPT
-  --------------------------------
-  1. Open the Google Sheet:
-     https://docs.google.com/spreadsheets/d/1ndK65dNkl7bwt-5xMocd3xR9ASWmBu5aCp_2Ds7ulwk/edit?usp=sharing
-  2. Open Extensions -> Apps Script.
-  3. Paste and deploy a doPost(e) function (see app.js comments).
-  4. Deploy as Web App: Execute as "Me", access "Anyone".
-  5. Copy the Web App URL.
-  6. Open app.js and replace PASTE_GOOGLE_APPS_SCRIPT_URL_HERE with your URL.
-  7. Commit and push - the live site updates automatically.
+  GOOGLE SHEET LOGGING
+  --------------------
+  This app is designed to log positive actions and suggestions into:
+  https://docs.google.com/spreadsheets/d/1ndK65dNkl7bwt-5xMocd3xR9ASWmBu5aCp_2Ds7ulwk/edit?usp=sharing
+
+  To connect it, deploy a Google Apps Script web app from that sheet and
+  paste the resulting Web App URL into SCRIPT_URL in app.js.
   ============================================================
 -->
 <!DOCTYPE html>
@@ -48,57 +36,137 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="app">
+  <main class="app-shell">
     <header class="topbar">
       <h1 class="topbar-title">GiftFinder</h1>
-      <button id="resetBtn" type="button" class="btn-ghost">Reset progress</button>
     </header>
 
-    <section class="card-section" aria-live="polite">
-      <div id="loadingState" class="status-card">
-        <div class="spinner"></div>
-        <p>Loading products...</p>
-      </div>
+    <section id="discoverView" class="view view-active">
+      <div class="hero hero-discover">
+        <h2 class="hero-title">Welcome Tamara!</h2>
+        <p class="hero-copy">Lets help your loved ones find the perfect gift for you.</p>
 
-      <div id="productCard" class="card hidden">
-        <div class="stamp stamp-like" aria-hidden="true">LIKE</div>
-        <div class="stamp stamp-super-like" aria-hidden="true">SUPER</div>
-        <div class="stamp stamp-nope" aria-hidden="true">NOPE</div>
+        <div class="discover-card-zone" aria-live="polite">
+          <div id="loadingState" class="status-card">
+            <div class="spinner"></div>
+            <p>Loading gifts...</p>
+          </div>
 
-        <img id="productImage" class="card-img" alt="" />
-        <div class="card-no-image hidden" aria-hidden="true">★</div>
+          <div id="productCard" class="product-card hidden">
+            <div class="stamp stamp-like" aria-hidden="true">LIKE</div>
+            <div class="stamp stamp-super-like" aria-hidden="true">SUPER</div>
+            <div class="stamp stamp-nope" aria-hidden="true">NOPE</div>
 
-        <div class="card-overlay">
-          <h2 id="productTitle" class="card-title"></h2>
-          <a id="productLink" class="card-link" target="_blank" rel="noopener noreferrer">View product →</a>
+            <img id="productImage" class="product-card-image" alt="" />
+            <div id="productNoImage" class="product-card-no-image hidden" aria-hidden="true">★</div>
+
+            <div class="product-card-overlay">
+              <h3 id="productTitle" class="product-card-title"></h3>
+              <p id="productSubtitle" class="product-card-subtitle"></p>
+              <a id="productLink" class="product-card-link" target="_blank" rel="noopener noreferrer">View product →</a>
+            </div>
+          </div>
+
+          <div id="emptyState" class="status-card hidden">
+            <h3>You reached the end</h3>
+            <p>No more products for now.</p>
+          </div>
+
+          <div class="floating-actions">
+            <button id="nopeBtn" type="button" class="circle-action circle-nope" aria-label="Nope">✕</button>
+            <button id="superLikeBtn" type="button" class="circle-action circle-super" aria-label="Super Like">★</button>
+            <button id="likeBtn" type="button" class="circle-action circle-like" aria-label="Like">♥</button>
+          </div>
         </div>
       </div>
 
-      <div id="emptyState" class="status-card hidden">
-        <h2 id="emptyHeading">You reached the end</h2>
-        <p id="emptyBody">No more products for now.</p>
-      </div>
+      <section class="how-it-works">
+        <div class="section-kicker">How It Works</div>
+        <div class="instruction-list">
+          <div class="instruction-item">
+            <span class="instruction-badge is-green">→</span>
+            <p>Swipe <strong>right</strong> for gifts you love</p>
+          </div>
+          <div class="instruction-item">
+            <span class="instruction-badge is-red">←</span>
+            <p>Swipe <strong>left</strong> for ones you don't</p>
+          </div>
+          <div class="instruction-item">
+            <span class="instruction-badge is-purple">↑</span>
+            <p>Swipe <strong>up</strong> for a super like</p>
+          </div>
+        </div>
+      </section>
+
+      <button id="startJoyBtn" type="button" class="primary-cta">Start Finding Joy</button>
     </section>
 
-    <section class="actions">
-      <div class="action-item">
-        <button id="nopeBtn" type="button" class="btn-action btn-nope" aria-label="Nope">✕</button>
-        <span class="action-label">Nope</span>
+    <section id="likesView" class="view hidden">
+      <div class="hero hero-likes">
+        <h2 class="hero-title likes-title">Your Likes</h2>
+        <p class="hero-copy">A curated collection of things that made you smile.</p>
       </div>
-      <div class="action-item action-item-center">
-        <button id="superLikeBtn" type="button" class="btn-action btn-super-like" aria-label="Super Like">★</button>
-        <span class="action-label">Super Like</span>
-      </div>
-      <div class="action-item">
-        <button id="likeBtn" type="button" class="btn-action btn-like" aria-label="Like">♥</button>
-        <span class="action-label">Like</span>
-      </div>
+      <section id="likesList" class="likes-grid"></section>
     </section>
 
-    <section class="likes">
-      <h2 class="likes-heading">Your Positive Picks</h2>
-      <div id="likesList"></div>
+    <section id="suggestView" class="view hidden">
+      <div class="hero hero-suggest">
+        <h2 class="hero-title suggest-title">Share a Find</h2>
+        <p class="hero-copy">Help others find the perfect gift by suggesting a product you love.</p>
+      </div>
+
+      <section class="suggest-card">
+        <label class="suggest-label" for="suggestionUrl">Product Link</label>
+        <input
+          id="suggestionUrl"
+          class="suggest-input"
+          type="url"
+          inputmode="url"
+          autocomplete="url"
+          placeholder="Paste the URL of the product here..."
+        />
+        <button id="submitSuggestionBtn" type="button" class="suggest-button">Submit Suggestion ▷</button>
+        <p id="suggestionStatus" class="suggest-status hidden"></p>
+      </section>
     </section>
+
+    <div id="matchOverlay" class="match-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="matchTitle">
+      <div class="match-sheet">
+        <h2 id="matchTitle" class="match-title">It's a Gift Match!</h2>
+        <p class="match-copy">GiftJoy found something perfect.</p>
+
+        <div class="match-stack">
+          <div class="match-back-card"></div>
+          <div class="match-front-card">
+            <div class="match-heart">♥</div>
+            <img id="matchImage" class="match-image" alt="" />
+            <div id="matchNoImage" class="match-no-image hidden" aria-hidden="true">★</div>
+            <div class="match-card-copy">
+              <span class="match-label">Your Match</span>
+              <h3 id="matchProductTitle" class="match-product-title"></h3>
+            </div>
+          </div>
+        </div>
+
+        <button id="keepSwipingBtn" type="button" class="match-primary">Keep Swiping</button>
+        <button id="viewLikesBtn" type="button" class="match-secondary">View Your Likes</button>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button type="button" class="nav-item nav-item-active" data-view="discover">
+        <span class="nav-icon">✦</span>
+        <span class="nav-label">Discover</span>
+      </button>
+      <button type="button" class="nav-item" data-view="likes">
+        <span class="nav-icon">♥</span>
+        <span class="nav-label">My Likes</span>
+      </button>
+      <button type="button" class="nav-item" data-view="suggest">
+        <span class="nav-icon">◔</span>
+        <span class="nav-label">Suggest</span>
+      </button>
+    </nav>
   </main>
 
   <script src="products.js"></script>
