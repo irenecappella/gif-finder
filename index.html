@@ -1,39 +1,40 @@
 <!--
   ============================================================
-  GIFTFINDER — Static swipe-to-like product app
+  GIFTFINDER - Static swipe-to-like product app
   ============================================================
 
   FILES
-  ─────
-  index.html   — this file (markup + README)
-  styles.css   — all visual styles (mobile-first)
-  app.js       — all logic (state, rendering, submit)
-  products.js  — product list (edit this to add/remove products)
+  -----
+  index.html   - this file (markup + README)
+  styles.css   - all visual styles (mobile-first)
+  app.js       - all logic (state, rendering, Google Sheets logging)
+  products.js  - product list (edit this to add/remove products)
 
   HOW TO ADD PRODUCTS
-  ───────────────────
+  -------------------
   Edit products.js. Each item in the PRODUCT_LIST array needs:
-    { id: "unique-id", title: "Name", url: "https://…", image: "https://…" }
-  IDs must be stable — never change an id once set or progress breaks.
+    { id: "unique-id", title: "Name", url: "https://...", image: "https://..." }
+  IDs must be stable - never change an id once set or progress breaks.
   New products are automatically shown to users who haven't seen them.
   Works when opened directly from the filesystem (no server needed).
 
   HOW TO DEPLOY TO GITHUB PAGES
-  ──────────────────────────────
+  -----------------------------
   1. Push this repo to GitHub (main branch).
-  2. Go to repo Settings → Pages.
+  2. Go to repo Settings -> Pages.
   3. Set Source to "Deploy from a branch", pick main / root.
   4. Save. GitHub Pages URL will appear (e.g. https://yourname.github.io/repo/).
   5. Share that URL with the person using the app.
-
   HOW TO SET UP GOOGLE APPS SCRIPT
-  ──────────────────────────────────
-  1. Open Google Sheets → Extensions → Apps Script.
-  2. Paste and deploy a doPost(e) function (see app.js comments).
-  3. Deploy as Web App: Execute as "Me", access "Anyone".
-  4. Copy the Web App URL.
-  5. Open app.js and replace PASTE_GOOGLE_APPS_SCRIPT_URL_HERE with your URL.
-  6. Commit and push — the live site updates automatically.
+  --------------------------------
+  1. Open the Google Sheet:
+     https://docs.google.com/spreadsheets/d/1ndK65dNkl7bwt-5xMocd3xR9ASWmBu5aCp_2Ds7ulwk/edit?usp=sharing
+  2. Open Extensions -> Apps Script.
+  3. Paste and deploy a doPost(e) function (see app.js comments).
+  4. Deploy as Web App: Execute as "Me", access "Anyone".
+  5. Copy the Web App URL.
+  6. Open app.js and replace PASTE_GOOGLE_APPS_SCRIPT_URL_HERE with your URL.
+  7. Commit and push - the live site updates automatically.
   ============================================================
 -->
 <!DOCTYPE html>
@@ -48,27 +49,24 @@
 </head>
 <body>
   <main class="app">
-
     <header class="topbar">
       <h1 class="topbar-title">GiftFinder</h1>
       <button id="resetBtn" type="button" class="btn-ghost">Reset progress</button>
     </header>
 
-    <!-- Product card / loading / empty state -->
     <section class="card-section" aria-live="polite">
-
       <div id="loadingState" class="status-card">
         <div class="spinner"></div>
-        <p>Loading products…</p>
+        <p>Loading products...</p>
       </div>
 
       <div id="productCard" class="card hidden">
-        <!-- Stamps shown while dragging -->
-        <div class="stamp stamp-like" aria-hidden="true">LOVE</div>
+        <div class="stamp stamp-like" aria-hidden="true">LIKE</div>
+        <div class="stamp stamp-super-like" aria-hidden="true">SUPER</div>
         <div class="stamp stamp-nope" aria-hidden="true">NOPE</div>
 
         <img id="productImage" class="card-img" alt="" />
-        <div class="card-no-image hidden" aria-hidden="true"></div>
+        <div class="card-no-image hidden" aria-hidden="true">★</div>
 
         <div class="card-overlay">
           <h2 id="productTitle" class="card-title"></h2>
@@ -80,14 +78,16 @@
         <h2 id="emptyHeading">You reached the end</h2>
         <p id="emptyBody">No more products for now.</p>
       </div>
-
     </section>
 
-    <!-- Like / Nope -->
     <section class="actions">
       <div class="action-item">
         <button id="nopeBtn" type="button" class="btn-action btn-nope" aria-label="Nope">✕</button>
         <span class="action-label">Nope</span>
+      </div>
+      <div class="action-item action-item-center">
+        <button id="superLikeBtn" type="button" class="btn-action btn-super-like" aria-label="Super Like">★</button>
+        <span class="action-label">Super Like</span>
       </div>
       <div class="action-item">
         <button id="likeBtn" type="button" class="btn-action btn-like" aria-label="Like">♥</button>
@@ -95,25 +95,10 @@
       </div>
     </section>
 
-    <!-- Submit -->
-    <section class="submit-section">
-      <button id="submitBtn" type="button" class="btn-submit" disabled>Submit results</button>
-      <p id="submitMsg" class="submit-msg hidden"></p>
-    </section>
-
-    <!-- Counts -->
-    <section class="status">
-      <span class="status-chip">Seen <strong id="seenCount">0</strong></span>
-      <span class="status-chip">Liked <strong id="likedCount">0</strong></span>
-      <span class="status-chip">Left <strong id="remainingCount">0</strong></span>
-    </section>
-
-    <!-- Liked products list -->
     <section class="likes">
-      <h2 class="likes-heading">Your Likes</h2>
+      <h2 class="likes-heading">Your Positive Picks</h2>
       <div id="likesList"></div>
     </section>
-
   </main>
 
   <script src="products.js"></script>
