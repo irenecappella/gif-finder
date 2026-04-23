@@ -1,777 +1,123 @@
+<!--
+  ============================================================
+  GIFTFINDER — Static swipe-to-like product app
+  ============================================================
+
+  FILES
+  ─────
+  index.html    — this file (markup + README)
+  styles.css    — all visual styles (mobile-first)
+  app.js        — all logic (state, rendering, submit)
+  products.json — product list (edit this to add products)
+
+  HOW TO ADD PRODUCTS
+  ───────────────────
+  Edit products.json. Each item needs:
+    { "id": "unique-id", "title": "Name", "url": "https://…", "image": "https://…" }
+  IDs must be stable — never change a product's id or progress breaks.
+  New products are automatically shown to users who haven't seen them.
+
+  HOW TO DEPLOY TO GITHUB PAGES
+  ──────────────────────────────
+  1. Push this repo to GitHub (main branch).
+  2. Go to repo Settings → Pages.
+  3. Set Source to "Deploy from a branch", pick main / root.
+  4. Save. GitHub Pages URL will appear (e.g. https://yourname.github.io/repo/).
+  5. Share that URL with the person using the app.
+  Note: fetch('./products.json') requires HTTP — it does NOT work when
+        opening index.html directly from the filesystem. Use GitHub Pages
+        or a local server (e.g. VS Code Live Server) for testing.
+
+  HOW TO SET UP GOOGLE APPS SCRIPT
+  ──────────────────────────────────
+  1. Open Google Sheets → Extensions → Apps Script.
+  2. Paste and deploy a doPost(e) function (see app.js comments).
+  3. Deploy as Web App: Execute as "Me", access "Anyone".
+  4. Copy the Web App URL.
+  5. Open app.js and replace PASTE_GOOGLE_APPS_SCRIPT_URL_HERE with your URL.
+  6. Commit and push — the live site updates automatically.
+  ============================================================
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>GiftFinder</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-<script>
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        colors: {
-          "primary": "#006c49",
-          "on-primary": "#ffffff",
-          "primary-container": "#10b981",
-          "on-primary-container": "#00422b",
-          "secondary": "#6b38d4",
-          "on-secondary": "#ffffff",
-          "secondary-container": "#8455ef",
-          "on-secondary-container": "#fffbff",
-          "tertiary": "#2b6954",
-          "surface": "#f8f9fa",
-          "surface-container": "#edeeef",
-          "surface-container-low": "#f3f4f5",
-          "surface-container-high": "#e7e8e9",
-          "on-surface": "#191c1d",
-          "on-surface-variant": "#3c4a42",
-          "outline": "#6c7a71",
-          "outline-variant": "#bbcabf",
-          "error": "#ba1a1a",
-          "background": "#f8f9fa",
-          "on-background": "#191c1d",
-          "inverse-primary": "#4edea3",
-        },
-        borderRadius: {
-          "DEFAULT": "1rem",
-          "sm": "0.5rem",
-          "md": "1.5rem",
-          "lg": "2rem",
-          "xl": "3rem",
-          "full": "9999px"
-        },
-        fontFamily: {
-          sans: ["Plus Jakarta Sans", "sans-serif"]
-        }
-      }
-    }
-  }
-</script>
-<style>
-  * { -webkit-tap-highlight-color: transparent; }
-  body { font-family: 'Plus Jakarta Sans', sans-serif; overscroll-behavior: none; }
-
-  .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    display: inline-block; line-height: 1;
-    text-transform: none; letter-spacing: normal;
-    word-wrap: normal; white-space: nowrap; direction: ltr;
-  }
-  .icon-filled { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-
-  /* Screen transitions */
-  .screen { display: none; position: absolute; inset: 0; }
-  .screen.active { display: flex; flex-direction: column; }
-
-  /* Swipe card */
-  #swipe-card {
-    touch-action: none;
-    user-select: none;
-    cursor: grab;
-    transition: none;
-    will-change: transform;
-  }
-  #swipe-card.animate-out {
-    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                opacity 0.35s ease;
-    pointer-events: none;
-  }
-  #swipe-card.reset {
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  /* LIKE / NOPE / SUPER stamps */
-  .stamp {
-    position: absolute;
-    top: 28px;
-    padding: 6px 16px;
-    border-radius: 8px;
-    border-width: 3px;
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.1s;
-    z-index: 10;
-  }
-  .stamp-like  { left: 24px;  color: #006c49; border-color: #006c49; transform: rotate(-15deg); }
-  .stamp-nope  { right: 24px; color: #ba1a1a; border-color: #ba1a1a; transform: rotate(15deg); }
-  .stamp-super { left: 50%; transform: translateX(-50%) rotate(0deg); top: auto; bottom: 40px; color: #8455ef; border-color: #8455ef; }
-
-  /* Glass effect */
-  .glass { background: rgba(255,255,255,0.65); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-
-  /* Card back layers */
-  .card-back-1 { transform: rotate(-5deg) scale(0.95) translateY(8px); opacity: 0.45; }
-  .card-back-2 { transform: rotate(2deg) scale(0.97) translateY(4px); opacity: 0.7; }
-
-  /* Celebration gradient */
-  .celebrate-bg { background: linear-gradient(135deg, #10b981 0%, #8455ef 60%, #6b38d4 100%); }
-
-  /* Match screen card stack */
-  .match-back  { transform: rotate(-6deg); }
-  .match-front { transform: rotate(3deg); }
-
-  /* Bounce animation */
-  @keyframes bounce-icon {
-    0%, 100% { transform: translateY(0); }
-    50%       { transform: translateY(-10px); }
-  }
-  .bounce { animation: bounce-icon 1.4s ease-in-out infinite; }
-
-  /* Mesh bg */
-  .bg-mesh {
-    background-color: #f8f9fa;
-    background-image:
-      radial-gradient(at 0% 0%,   rgba(16,185,129,0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(132,85,239,0.10) 0px, transparent 50%);
-  }
-
-  /* Bento grid */
-  .bento-hero { grid-column: span 2; }
-
-  /* Button press */
-  .btn-press:active { transform: scale(0.92); }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>GiftFinder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="bg-background text-on-background min-h-screen overflow-hidden">
+<body>
+  <main class="app">
 
-<div id="app" class="relative w-full h-screen max-w-[430px] mx-auto overflow-hidden">
+    <header class="topbar">
+      <h1 class="topbar-title">GiftFinder</h1>
+      <button id="resetBtn" type="button" class="btn-ghost">Reset progress</button>
+    </header>
 
-<!-- ═══════════════════════════════════════════
-     SCREEN 1 — WELCOME
-════════════════════════════════════════════ -->
-<div id="screen-welcome" class="screen active bg-mesh flex-col">
-  <!-- Header -->
-  <header class="flex items-center px-6 h-16 glass border-b border-white/30 shadow-sm z-10 flex-shrink-0">
-    <span class="text-xl font-black text-primary tracking-tight">GiftFinder</span>
-  </header>
+    <!-- Product card / loading / empty state -->
+    <section class="card-section" aria-live="polite">
 
-  <main class="flex-1 overflow-y-auto pb-28 px-6 pt-6">
-    <section class="mb-4">
-      <h1 class="text-[40px] font-extrabold text-on-background leading-tight tracking-tight mb-2">Welcome Tamara!</h1>
-      <p class="text-[18px] font-medium text-on-surface-variant leading-relaxed">Lets help your loved ones find the perfect gift for you.</p>
+      <div id="loadingState" class="status-card">
+        <div class="spinner"></div>
+        <p>Loading products…</p>
+      </div>
+
+      <div id="productCard" class="card hidden">
+        <!-- Stamps shown while dragging -->
+        <div class="stamp stamp-like" aria-hidden="true">LOVE</div>
+        <div class="stamp stamp-nope" aria-hidden="true">NOPE</div>
+
+        <img id="productImage" class="card-img" alt="" />
+        <div class="card-no-image hidden" aria-hidden="true"></div>
+
+        <div class="card-overlay">
+          <h2 id="productTitle" class="card-title"></h2>
+          <a id="productLink" class="card-link" target="_blank" rel="noopener noreferrer">View product →</a>
+        </div>
+      </div>
+
+      <div id="emptyState" class="status-card hidden">
+        <h2 id="emptyHeading">You reached the end</h2>
+        <p id="emptyBody">No more products for now.</p>
+      </div>
+
     </section>
 
-    <!-- Card stack preview -->
-    <div class="relative mt-6 mb-16">
-      <div class="absolute inset-0 bg-surface-container rounded-[2rem] card-back-1 shadow-xl"></div>
-      <div class="absolute inset-0 bg-surface-container-high rounded-[2rem] card-back-2 shadow-xl"></div>
-      <div class="relative w-full aspect-[4/5] rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,108,73,0.15)] bg-white">
-        <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVqi0EOoFTIQlQgTYx9K4aeoycmpz5L1fh6_C0jbozqfyPu_ZpUTzmO7pxVbEjb1swmibJ5bBzqG5cKfrYcu0PEmQLoAlQknDs8KE2fFO03uTFgdYWn037qM5NeTHMRYOoez6_PD-OzlOzrGIA9hqk43yMHDoIUWlDPa0-s8RuiK020JNSmL4WybvAKkb9HXXFix8-Ovow3zyBoRzHU4tYrvUfFmHvCWzDF_b8sGAQ4Str31EbRlh_gH-MXYiQPUfFwf7vcpClmg" alt="Gift preview"/>
-        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex flex-col justify-end p-5 text-white">
-          <h3 class="text-[24px] font-bold">Surprise Curation</h3>
-        </div>
+    <!-- Like / Nope -->
+    <section class="actions">
+      <div class="action-item">
+        <button id="nopeBtn" type="button" class="btn-action btn-nope" aria-label="Nope">✕</button>
+        <span class="action-label">Nope</span>
       </div>
-      <!-- Action buttons overlay -->
-      <div class="absolute -bottom-7 left-1/2 -translate-x-1/2 flex items-center gap-6 z-10">
-        <button class="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border border-red-100 btn-press">
-          <span class="material-symbols-outlined text-error text-3xl">close</span>
-        </button>
-        <button class="w-16 h-16 rounded-full bg-secondary-container text-white shadow-[0_0_20px_rgba(132,85,239,0.4)] flex items-center justify-center btn-press">
-          <span class="material-symbols-outlined icon-filled text-3xl">star</span>
-        </button>
-        <button class="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border border-green-100 btn-press">
-          <span class="material-symbols-outlined icon-filled text-primary text-3xl">favorite</span>
-        </button>
+      <div class="action-item">
+        <button id="likeBtn" type="button" class="btn-action btn-like" aria-label="Like">♥</button>
+        <span class="action-label">Like</span>
       </div>
-    </div>
+    </section>
 
-    <!-- How it works -->
-    <div class="glass rounded-[1rem] p-6 border border-white/40 shadow-sm mt-4">
-      <h4 class="text-[14px] font-bold text-on-surface-variant mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-primary text-xl">touch_app</span>
-        HOW IT WORKS
-      </h4>
-      <div class="space-y-4">
-        <div class="flex items-center gap-4">
-          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-outlined text-primary text-base">arrow_forward</span>
-          </div>
-          <p class="text-[16px] text-on-surface-variant">Swipe <strong class="text-primary">right</strong> for gifts you love</p>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-outlined text-error text-base">arrow_back</span>
-          </div>
-          <p class="text-[16px] text-on-surface-variant">Swipe <strong class="text-error">left</strong> for ones you don't</p>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-outlined text-secondary text-base">arrow_upward</span>
-          </div>
-          <p class="text-[16px] text-on-surface-variant">Swipe <strong class="text-secondary">up</strong> for a super like</p>
-        </div>
-      </div>
-    </div>
+    <!-- Submit -->
+    <section class="submit-section">
+      <button id="submitBtn" type="button" class="btn-submit" disabled>Submit results</button>
+      <p id="submitMsg" class="submit-msg hidden"></p>
+    </section>
 
-    <!-- CTA -->
-    <button onclick="goToDiscover()" class="w-full mt-5 py-4 rounded-full bg-secondary text-white text-[18px] font-bold shadow-[0_8px_25px_rgba(107,56,212,0.3)] btn-press transition-all duration-200">
-      Start Finding Joy
-    </button>
+    <!-- Counts -->
+    <section class="status">
+      <span class="status-chip">Seen <strong id="seenCount">0</strong></span>
+      <span class="status-chip">Liked <strong id="likedCount">0</strong></span>
+      <span class="status-chip">Left <strong id="remainingCount">0</strong></span>
+    </section>
+
+    <!-- Liked products list -->
+    <section class="likes">
+      <h2 class="likes-heading">Your Likes</h2>
+      <div id="likesList"></div>
+    </section>
+
   </main>
 
-  <!-- Bottom nav -->
-  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 flex justify-around items-center px-4 pb-6 pt-3 glass rounded-t-[32px] shadow-[0_-8px_30px_rgba(16,185,129,0.1)] border-t border-white/20">
-    <button class="flex flex-col items-center justify-center bg-purple-600 text-white rounded-full px-5 py-2 shadow-[0_0_15px_rgba(147,51,234,0.4)]" onclick="goToDiscover()">
-      <span class="material-symbols-outlined text-xl">auto_awesome</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Discover</span>
-    </button>
-    <button class="flex flex-col items-center justify-center text-on-surface/50 p-2" onclick="showScreen('screen-likes')">
-      <span class="material-symbols-outlined text-xl">favorite</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Likes</span>
-    </button>
-    <button class="flex flex-col items-center justify-center text-on-surface/50 p-2" onclick="showScreen('screen-suggest')">
-      <span class="material-symbols-outlined text-xl">lightbulb</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Suggest</span>
-    </button>
-  </nav>
-</div>
-
-
-<!-- ═══════════════════════════════════════════
-     SCREEN 2 — DISCOVER (swipe)
-════════════════════════════════════════════ -->
-<div id="screen-discover" class="screen bg-[#F0F2F5] flex-col">
-  <!-- Header -->
-  <header class="flex items-center px-6 h-16 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm z-10 flex-shrink-0">
-    <span class="text-xl font-black text-primary tracking-tight">GiftFinder</span>
-  </header>
-
-  <main class="flex-1 flex flex-col items-center pt-4 pb-32 px-6 overflow-hidden">
-    <!-- Card stack area -->
-    <div id="card-stack" class="relative w-full" style="aspect-ratio:4/5; max-height: 56vh;">
-      <!-- Back cards (decorative) -->
-      <div id="back-card-2" class="absolute inset-0 bg-surface-container rounded-[2rem] card-back-1 shadow-xl overflow-hidden">
-        <div id="back-img-2" class="w-full h-full bg-cover bg-center"></div>
-      </div>
-      <div id="back-card-1" class="absolute inset-0 bg-surface-container-high rounded-[2rem] card-back-2 shadow-xl overflow-hidden">
-        <div id="back-img-1" class="w-full h-full bg-cover bg-center"></div>
-      </div>
-
-      <!-- Main swipeable card -->
-      <div id="swipe-card" class="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl bg-white">
-        <!-- Stamps -->
-        <div id="stamp-like"  class="stamp stamp-like">LOVE</div>
-        <div id="stamp-nope"  class="stamp stamp-nope">NOPE</div>
-        <div id="stamp-super" class="stamp stamp-super">SUPER LIKE</div>
-
-        <img id="card-img" class="w-full h-full object-cover pointer-events-none" src="" alt=""/>
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
-        <div class="absolute bottom-0 left-0 right-0 p-5 text-white pointer-events-none">
-          <p id="card-category" class="text-[11px] font-semibold tracking-widest uppercase opacity-80 mb-1"></p>
-          <h2 id="card-name" class="text-[24px] font-bold leading-tight"></h2>
-          <p id="card-brand" class="text-[14px] opacity-80 mt-0.5 font-medium"></p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Counter -->
-    <p id="card-counter" class="text-[12px] text-on-surface-variant mt-3 font-semibold"></p>
-
-    <!-- Action buttons -->
-    <div class="w-full flex justify-center items-end gap-8 mt-4">
-      <div class="flex flex-col items-center gap-2">
-        <button id="btn-nope" class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md border border-gray-100 btn-press transition-transform">
-          <span class="material-symbols-outlined text-error text-3xl">close</span>
-        </button>
-        <span class="text-[12px] font-semibold text-on-surface-variant">Nope</span>
-      </div>
-      <div class="flex flex-col items-center gap-2">
-        <button id="btn-super" class="w-20 h-20 rounded-full bg-secondary-container flex items-center justify-center shadow-lg border-4 border-white btn-press transition-transform">
-          <span class="material-symbols-outlined icon-filled text-white text-4xl">star</span>
-        </button>
-        <span class="text-[14px] font-bold text-secondary-container">Super Like</span>
-      </div>
-      <div class="flex flex-col items-center gap-2">
-        <button id="btn-love" class="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md border border-gray-100 btn-press transition-transform">
-          <span class="material-symbols-outlined icon-filled text-primary text-3xl">favorite</span>
-        </button>
-        <span class="text-[12px] font-semibold text-on-surface-variant">Love</span>
-      </div>
-    </div>
-  </main>
-
-  <!-- Bottom nav -->
-  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white/80 backdrop-blur-xl rounded-t-[32px] shadow-[0_-8px_30px_rgba(16,185,129,0.1)] border-t border-gray-200/30">
-    <button class="flex flex-col items-center justify-center bg-purple-600 text-white rounded-full px-5 py-2 shadow-[0_0_15px_rgba(147,51,234,0.4)]">
-      <span class="material-symbols-outlined icon-filled text-xl">auto_awesome</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Discover</span>
-    </button>
-    <button class="flex flex-col items-center justify-center text-slate-500 p-2" onclick="showScreen('screen-likes')">
-      <span class="material-symbols-outlined text-xl">favorite</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Likes</span>
-    </button>
-    <button class="flex flex-col items-center justify-center text-slate-500 p-2" onclick="showScreen('screen-suggest')">
-      <span class="material-symbols-outlined text-xl">lightbulb</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Suggest</span>
-    </button>
-  </nav>
-</div>
-
-
-<!-- ═══════════════════════════════════════════
-     SCREEN 3 — MATCH CELEBRATION
-════════════════════════════════════════════ -->
-<div id="screen-match" class="screen celebrate-bg flex-col items-center">
-  <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 32px 32px;"></div>
-
-  <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pb-32 pt-10 w-full">
-    <div class="text-center mb-6">
-      <h1 class="text-[40px] font-extrabold text-white drop-shadow-xl mb-2">It's a Gift Match!</h1>
-      <p class="text-[18px] font-medium text-white/90">GiftJoy found something perfect.</p>
-    </div>
-
-    <!-- Card stack -->
-    <div class="relative w-full max-w-[300px]" style="aspect-ratio:4/5;">
-      <div class="absolute top-5 left-8 w-full h-full rounded-[2rem] overflow-hidden match-back shadow-2xl border-4 border-white/30">
-        <img id="match-back-img" class="w-full h-full object-cover" src="" alt=""/>
-        <div class="absolute top-4 right-4 bg-secondary text-white px-3 py-1 rounded-full text-[12px] font-bold shadow-lg">RECOMMENDED</div>
-      </div>
-      <div class="absolute top-0 left-0 w-full h-full rounded-[2rem] overflow-hidden match-front shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-4 border-white">
-        <img id="match-front-img" class="w-full h-full object-cover" src="" alt=""/>
-        <div class="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
-          <p class="text-white text-[12px] font-bold uppercase tracking-widest opacity-80 mb-1">Your Match</p>
-          <h2 id="match-name" class="text-white text-[24px] font-bold"></h2>
-        </div>
-      </div>
-      <div class="absolute -top-6 -right-6 bg-white p-4 rounded-full shadow-2xl bounce z-10">
-        <span class="material-symbols-outlined icon-filled text-secondary text-4xl">favorite</span>
-      </div>
-    </div>
-
-    <!-- Buttons -->
-    <div class="w-full max-w-[300px] flex flex-col gap-3 mt-8">
-      <button onclick="goToDiscover()" class="w-full py-4 bg-primary text-white text-[18px] font-bold rounded-full shadow-lg btn-press transition-transform">
-        Keep Swiping
-      </button>
-      <button onclick="showScreen('screen-likes')" class="w-full py-4 bg-white/20 backdrop-blur-md text-white text-[18px] font-bold rounded-full border border-white/30 btn-press transition-transform">
-        View Your Likes
-      </button>
-    </div>
-  </main>
-
-  <!-- Bottom nav -->
-  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 flex justify-around items-center px-4 pb-6 pt-3 glass rounded-t-[32px] shadow-[0_-8px_30px_rgba(16,185,129,0.1)] border-t border-white/20">
-    <button class="flex flex-col items-center justify-center text-white/60 p-2" onclick="goToDiscover()">
-      <span class="material-symbols-outlined text-xl">auto_awesome</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Discover</span>
-    </button>
-    <button class="flex flex-col items-center justify-center bg-purple-600 text-white rounded-full px-5 py-2 shadow-[0_0_15px_rgba(147,51,234,0.4)]" onclick="showScreen('screen-likes')">
-      <span class="material-symbols-outlined icon-filled text-xl">favorite</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Likes</span>
-    </button>
-    <button class="flex flex-col items-center justify-center text-white/60 p-2" onclick="showScreen('screen-suggest')">
-      <span class="material-symbols-outlined text-xl">lightbulb</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Suggest</span>
-    </button>
-  </nav>
-</div>
-
-
-<!-- ═══════════════════════════════════════════
-     SCREEN 4 — MY LIKES
-════════════════════════════════════════════ -->
-<div id="screen-likes" class="screen bg-background flex-col">
-  <header class="flex items-center px-6 h-16 bg-white/60 backdrop-blur-xl border-b border-white/30 shadow-sm z-10 flex-shrink-0">
-    <span class="text-xl font-black text-primary tracking-tight">GiftFinder</span>
-  </header>
-
-  <main class="flex-1 overflow-y-auto pb-28 px-6 pt-6">
-    <div class="mb-8">
-      <h1 class="text-[40px] font-extrabold text-primary leading-tight">Your Likes</h1>
-      <p class="text-[16px] text-on-surface-variant mt-1">A curated collection of things that made you smile.</p>
-    </div>
-
-    <div id="likes-grid" class="grid grid-cols-2 gap-4">
-      <!-- populated by JS -->
-    </div>
-
-    <div id="likes-empty" class="hidden flex-col items-center justify-center py-20 text-center">
-      <span class="material-symbols-outlined text-on-surface-variant text-6xl mb-4">favorite_border</span>
-      <p class="text-[18px] font-semibold text-on-surface-variant">No likes yet</p>
-      <p class="text-[14px] text-on-surface-variant/70 mt-1">Start swiping to find gifts you love!</p>
-      <button onclick="goToDiscover()" class="mt-6 px-8 py-3 rounded-full bg-secondary text-white font-bold shadow-lg btn-press">Start Discovering</button>
-    </div>
-  </main>
-
-  <!-- Bottom nav -->
-  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 flex justify-around items-center px-4 pb-6 pt-3 glass rounded-t-[32px] shadow-[0_-8px_30px_rgba(16,185,129,0.1)] border-t border-white/20">
-    <button class="flex flex-col items-center justify-center text-on-surface/50 p-2" onclick="showScreen('screen-discover')">
-      <span class="material-symbols-outlined text-xl">auto_awesome</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Discover</span>
-    </button>
-    <button class="flex flex-col items-center justify-center bg-purple-600 text-white rounded-full px-5 py-2 shadow-[0_0_15px_rgba(147,51,234,0.4)]">
-      <span class="material-symbols-outlined icon-filled text-xl">favorite</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Likes</span>
-    </button>
-    <button class="flex flex-col items-center justify-center text-on-surface/50 p-2" onclick="showScreen('screen-suggest')">
-      <span class="material-symbols-outlined text-xl">lightbulb</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Suggest</span>
-    </button>
-  </nav>
-</div>
-
-
-<!-- ═══════════════════════════════════════════
-     SCREEN 5 — SUGGEST
-════════════════════════════════════════════ -->
-<div id="screen-suggest" class="screen bg-background flex-col">
-  <header class="flex items-center px-6 h-16 bg-white/60 backdrop-blur-xl border-b border-white/30 shadow-sm z-10 flex-shrink-0">
-    <span class="text-xl font-black text-primary tracking-tight">GiftFinder</span>
-  </header>
-
-  <main class="flex-1 overflow-y-auto pb-28 px-6 pt-6">
-    <div class="mb-8">
-      <h1 class="text-[28px] font-bold text-on-surface mb-2">Share a Find</h1>
-      <p class="text-[16px] text-on-surface-variant">Help others find the perfect gift by suggesting a product you love.</p>
-    </div>
-
-    <form onsubmit="submitSuggestion(event)" class="space-y-4">
-      <div>
-        <label class="block text-[14px] font-bold text-on-surface-variant mb-2 ml-1">Product Link</label>
-        <input id="suggest-url" type="url" placeholder="Paste the URL of the product here..."
-          class="w-full px-5 py-3 rounded-[1rem] border-none bg-surface-container shadow-inner focus:ring-2 focus:ring-primary-container text-on-surface placeholder:text-outline/60 outline-none text-[16px]"/>
-      </div>
-
-      <div class="pt-6">
-        <button type="submit" class="w-full py-4 rounded-full bg-secondary-container text-white text-[18px] font-bold shadow-[0_10px_25px_rgba(132,85,239,0.3)] btn-press transition-all flex items-center justify-center gap-2">
-          <span>Submit Suggestion</span>
-          <span class="material-symbols-outlined text-xl">send</span>
-        </button>
-      </div>
-    </form>
-
-    <div id="suggest-success" class="hidden mt-6 p-4 rounded-[1rem] bg-primary/10 border border-primary/20 text-center">
-      <span class="material-symbols-outlined icon-filled text-primary text-3xl">check_circle</span>
-      <p class="text-[16px] font-semibold text-primary mt-2">Suggestion submitted!</p>
-      <p class="text-[14px] text-on-surface-variant mt-1">Thanks for helping the community.</p>
-    </div>
-  </main>
-
-  <!-- Bottom nav -->
-  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 flex justify-around items-center px-4 pb-6 pt-3 glass rounded-t-[32px] shadow-[0_-8px_30px_rgba(16,185,129,0.1)] border-t border-white/20">
-    <button class="flex flex-col items-center justify-center text-on-surface/50 p-2" onclick="goToDiscover()">
-      <span class="material-symbols-outlined text-xl">auto_awesome</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Discover</span>
-    </button>
-    <button class="flex flex-col items-center justify-center text-on-surface/50 p-2" onclick="showScreen('screen-likes')">
-      <span class="material-symbols-outlined text-xl">favorite</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Likes</span>
-    </button>
-    <button class="flex flex-col items-center justify-center bg-purple-600 text-white rounded-full px-5 py-2 shadow-[0_0_15px_rgba(147,51,234,0.4)]">
-      <span class="material-symbols-outlined icon-filled text-xl">lightbulb</span>
-      <span class="text-[10px] font-semibold tracking-wide uppercase mt-0.5">Suggest</span>
-    </button>
-  </nav>
-</div>
-
-</div><!-- end #app -->
-
-<script>
-// ──────────────────────────────────────────────
-// PRODUCT DATA
-// ──────────────────────────────────────────────
-const products = [
-  {
-    id: 1,
-    name: "Sole Mio Lucia Tee",
-    brand: "Thinking MU",
-    category: "Women's Fashion",
-    url: "https://thinkingmu.com/en/products/sole-mio-pannacota-lucia-tee",
-    img: "https://thinkingmu.com/cdn/shop/files/WTS00493_2_92bc07fb-07fa-41f4-9fef-0ef95f9d224c.jpg?v=1771949799"
-  },
-  {
-    id: 2,
-    name: "Sol Aaron Tee",
-    brand: "Thinking MU",
-    category: "Men's Fashion",
-    url: "https://thinkingmu.com/en/products/sol-contrast-white-aaron-tee",
-    img: "https://thinkingmu.com/cdn/shop/files/MTS00469_0.jpg?v=1736358892"
-  },
-  {
-    id: 3,
-    name: "Classic Clog",
-    brand: "Crocs",
-    category: "Footwear",
-    url: "https://www.crocs.nl/p/classic-clog/10001.html?cgid=sale&cid=862",
-    img: "https://media.crocs.com/images/t_standard/f_auto%2Cq_auto/products/10001_862_ALT100/crocs-classic-clog-rust-side-view"
-  }
-];
-
-// ──────────────────────────────────────────────
-// STATE
-// ──────────────────────────────────────────────
-let currentIndex = 0;
-let likes = [];
-let superLikes = [];
-let isAnimating = false;
-
-// ──────────────────────────────────────────────
-// SCREEN NAVIGATION
-// ──────────────────────────────────────────────
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if (id === 'screen-likes') renderLikes();
-}
-
-function goToDiscover() {
-  showScreen('screen-discover');
-  loadCard(currentIndex);
-}
-
-// ──────────────────────────────────────────────
-// CARD LOADING
-// ──────────────────────────────────────────────
-function loadCard(index) {
-  if (index >= products.length) {
-    showAllDoneState();
-    return;
-  }
-  const p = products[index];
-  document.getElementById('card-img').src = p.img;
-  document.getElementById('card-name').textContent = p.name;
-  document.getElementById('card-brand').textContent = p.brand;
-  document.getElementById('card-category').textContent = p.category;
-  document.getElementById('card-counter').textContent = `${index + 1} of ${products.length}`;
-
-  // Reset card position & stamps
-  const card = document.getElementById('swipe-card');
-  card.style.transform = 'translate(0px, 0px) rotate(0deg)';
-  ['stamp-like','stamp-nope','stamp-super'].forEach(id => {
-    document.getElementById(id).style.opacity = '0';
-  });
-
-  // Preload next card images in back slots
-  const next1 = products[index + 1];
-  const next2 = products[index + 2];
-  document.getElementById('back-img-1').style.backgroundImage = next1 ? `url(${next1.img})` : '';
-  document.getElementById('back-img-2').style.backgroundImage = next2 ? `url(${next2.img})` : '';
-}
-
-function showAllDoneState() {
-  const card = document.getElementById('swipe-card');
-  card.innerHTML = `
-    <div class="flex flex-col items-center justify-center h-full p-8 text-center bg-surface-container-low">
-      <span class="material-symbols-outlined text-primary text-6xl mb-4">done_all</span>
-      <h2 class="text-[24px] font-bold text-on-surface mb-2">You've seen them all!</h2>
-      <p class="text-[16px] text-on-surface-variant">Check your likes or wait for new gifts to drop.</p>
-    </div>`;
-  document.getElementById('card-counter').textContent = '';
-  document.getElementById('btn-nope').disabled = true;
-  document.getElementById('btn-super').disabled = true;
-  document.getElementById('btn-love').disabled = true;
-}
-
-// ──────────────────────────────────────────────
-// SWIPE MECHANICS
-// ──────────────────────────────────────────────
-const SWIPE_THRESHOLD = 80;
-const SUPER_THRESHOLD = -100;
-
-let startX = 0, startY = 0, curX = 0, curY = 0, dragging = false;
-
-const swipeCard = document.getElementById('swipe-card');
-
-function onPointerDown(e) {
-  if (isAnimating || currentIndex >= products.length) return;
-  dragging = true;
-  const pt = e.touches ? e.touches[0] : e;
-  startX = pt.clientX; startY = pt.clientY;
-  curX = 0; curY = 0;
-  swipeCard.style.transition = 'none';
-}
-
-function onPointerMove(e) {
-  if (!dragging) return;
-  e.preventDefault();
-  const pt = e.touches ? e.touches[0] : e;
-  curX = pt.clientX - startX;
-  curY = pt.clientY - startY;
-
-  const rot = curX * 0.08;
-  swipeCard.style.transform = `translate(${curX}px, ${curY}px) rotate(${rot}deg)`;
-
-  // Stamps
-  const stampLike  = document.getElementById('stamp-like');
-  const stampNope  = document.getElementById('stamp-nope');
-  const stampSuper = document.getElementById('stamp-super');
-
-  if (curY < SUPER_THRESHOLD && Math.abs(curX) < 60) {
-    stampSuper.style.opacity = Math.min(1, Math.abs(curY) / 120).toString();
-    stampLike.style.opacity  = '0';
-    stampNope.style.opacity  = '0';
-  } else if (curX > 30) {
-    stampLike.style.opacity  = Math.min(1, curX / 100).toString();
-    stampNope.style.opacity  = '0';
-    stampSuper.style.opacity = '0';
-  } else if (curX < -30) {
-    stampNope.style.opacity  = Math.min(1, Math.abs(curX) / 100).toString();
-    stampLike.style.opacity  = '0';
-    stampSuper.style.opacity = '0';
-  } else {
-    stampLike.style.opacity  = '0';
-    stampNope.style.opacity  = '0';
-    stampSuper.style.opacity = '0';
-  }
-}
-
-function onPointerUp() {
-  if (!dragging) return;
-  dragging = false;
-
-  if (curY < SUPER_THRESHOLD && Math.abs(curX) < 80) {
-    triggerSwipe('super');
-  } else if (curX > SWIPE_THRESHOLD) {
-    triggerSwipe('love');
-  } else if (curX < -SWIPE_THRESHOLD) {
-    triggerSwipe('nope');
-  } else {
-    // Snap back
-    swipeCard.classList.add('reset');
-    swipeCard.style.transform = 'translate(0px, 0px) rotate(0deg)';
-    ['stamp-like','stamp-nope','stamp-super'].forEach(id => {
-      document.getElementById(id).style.opacity = '0';
-    });
-    setTimeout(() => swipeCard.classList.remove('reset'), 300);
-  }
-}
-
-swipeCard.addEventListener('mousedown',  onPointerDown);
-swipeCard.addEventListener('touchstart', onPointerDown, { passive: false });
-window.addEventListener('mousemove',  onPointerMove);
-window.addEventListener('touchmove',  onPointerMove, { passive: false });
-window.addEventListener('mouseup',   onPointerUp);
-window.addEventListener('touchend',  onPointerUp);
-
-// ──────────────────────────────────────────────
-// SWIPE ACTION
-// ──────────────────────────────────────────────
-function triggerSwipe(action) {
-  if (isAnimating || currentIndex >= products.length) return;
-  isAnimating = true;
-
-  const card = document.getElementById('swipe-card');
-  card.classList.add('animate-out');
-  card.classList.remove('reset');
-
-  const product = products[currentIndex];
-  let tx = 0, ty = 0;
-
-  if (action === 'love') {
-    tx = window.innerWidth + 100;
-    document.getElementById('stamp-like').style.opacity = '1';
-    likes.push(product);
-  } else if (action === 'nope') {
-    tx = -(window.innerWidth + 100);
-    document.getElementById('stamp-nope').style.opacity = '1';
-  } else if (action === 'super') {
-    ty = -(window.innerHeight + 100);
-    document.getElementById('stamp-super').style.opacity = '1';
-    likes.push(product);
-    superLikes.push(product);
-  }
-
-  card.style.transform = `translate(${tx}px, ${ty}px) rotate(${tx > 0 ? 30 : tx < 0 ? -30 : 0}deg)`;
-  card.style.opacity = '0';
-
-  setTimeout(() => {
-    card.classList.remove('animate-out');
-    card.style.opacity = '1';
-    currentIndex++;
-    isAnimating = false;
-
-    if (action === 'love' || action === 'super') {
-      // Show match screen
-      const matched = product;
-      const prevProd = products[Math.max(0, currentIndex - 2)] || product;
-      document.getElementById('match-front-img').src = matched.img;
-      document.getElementById('match-back-img').src  = prevProd.img;
-      document.getElementById('match-name').textContent = matched.name;
-      showScreen('screen-match');
-    } else {
-      loadCard(currentIndex);
-    }
-  }, 380);
-}
-
-// Button handlers
-document.getElementById('btn-nope').addEventListener('click',  () => triggerSwipe('nope'));
-document.getElementById('btn-love').addEventListener('click',  () => triggerSwipe('love'));
-document.getElementById('btn-super').addEventListener('click', () => triggerSwipe('super'));
-
-// ──────────────────────────────────────────────
-// LIKES GRID
-// ──────────────────────────────────────────────
-function renderLikes() {
-  const grid  = document.getElementById('likes-grid');
-  const empty = document.getElementById('likes-empty');
-
-  if (likes.length === 0) {
-    grid.innerHTML = '';
-    grid.classList.add('hidden');
-    empty.classList.remove('hidden');
-    empty.classList.add('flex');
-    return;
-  }
-
-  grid.classList.remove('hidden');
-  empty.classList.add('hidden');
-  empty.classList.remove('flex');
-
-  grid.innerHTML = likes.map((p, i) => {
-    const isHero  = i === 0;
-    const isSuper = superLikes.includes(p);
-    const colSpan = isHero ? 'col-span-2' : '';
-    const imgH    = isHero ? 'h-56' : 'h-36';
-
-    return `
-      <div class="${colSpan} bg-surface-container rounded-[1rem] overflow-hidden shadow-[0_4px_20px_rgba(16,185,129,0.08)] relative">
-        <div class="relative ${imgH} overflow-hidden">
-          <img src="${p.img}" alt="${p.name}" class="w-full h-full object-cover"/>
-          <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-          ${isHero ? `<div class="absolute bottom-0 left-0 right-0 p-4 text-white">
-            <h3 class="text-[22px] font-bold">${p.name}</h3>
-            <div class="flex justify-between items-center mt-1">
-              <span class="text-[13px] opacity-90">${p.brand}</span>
-              ${isSuper ? `<div class="bg-secondary-container text-white p-1.5 rounded-full shadow"><span class="material-symbols-outlined icon-filled text-base">favorite</span></div>` : ''}
-            </div>
-          </div>` : ''}
-        </div>
-        ${!isHero ? `<div class="p-3 bg-white/80">
-          <p class="text-[11px] font-semibold text-primary">${p.category}</p>
-          <h4 class="text-[14px] font-bold text-on-surface truncate">${p.name}</h4>
-          <p class="text-[12px] text-on-surface-variant">${p.brand}</p>
-          ${isSuper ? `<span class="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-secondary-container"><span class="material-symbols-outlined icon-filled text-xs">star</span>Super Liked</span>` : ''}
-        </div>` : ''}
-      </div>`;
-  }).join('');
-}
-
-// ──────────────────────────────────────────────
-// SUGGEST FORM
-// ──────────────────────────────────────────────
-function submitSuggestion(e) {
-  e.preventDefault();
-  const url = document.getElementById('suggest-url').value.trim();
-  if (!url) return;
-  document.getElementById('suggest-url').value = '';
-  document.getElementById('suggest-success').classList.remove('hidden');
-  setTimeout(() => {
-    document.getElementById('suggest-success').classList.add('hidden');
-  }, 3500);
-}
-
-// ──────────────────────────────────────────────
-// INIT
-// ──────────────────────────────────────────────
-loadCard(currentIndex);
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
