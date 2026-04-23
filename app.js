@@ -69,13 +69,13 @@ function saveState() {
   }
 }
 
-// ─── Load products.json ───────────────────────────────────────────────────────
-async function loadProducts() {
-  const res = await fetch('./products.json');
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching products.json`);
-  const raw = await res.json();
+// ─── Load products from products.js ──────────────────────────────────────────
+// products.js sets window.PRODUCT_LIST and is loaded as a plain <script> tag —
+// no fetch needed, so the app works when opened directly from the filesystem.
+function loadProducts() {
+  const raw = window.PRODUCT_LIST;
 
-  if (!Array.isArray(raw)) throw new Error('products.json must be a JSON array');
+  if (!Array.isArray(raw)) throw new Error('PRODUCT_LIST missing or not an array in products.js');
 
   // Validate, skip bad entries, warn on duplicate IDs
   const seenIds = new Set();
@@ -412,18 +412,16 @@ async function init() {
   window.addEventListener('mouseup',    onDragEnd);
   window.addEventListener('touchend',   onDragEnd);
 
-  // Fetch products
+  // Load products from the global defined in products.js
   try {
-    allProducts = await loadProducts();
+    allProducts = loadProducts();
   } catch (err) {
     console.error('GiftFinder:', err);
-    // Show error in the empty/loading slot
-    const loadEl   = el('loadingState');
+    const loadEl    = el('loadingState');
     const headingEl = loadEl?.querySelector('p');
-    if (loadEl)    loadEl.querySelector('.spinner')?.remove();
-    if (headingEl) headingEl.textContent =
-      'Could not load products.json. ' +
-      'Make sure you are serving this via GitHub Pages or a local server (not file://).';
+    if (loadEl)     loadEl.querySelector('.spinner')?.remove();
+    if (headingEl)  headingEl.textContent =
+      'Could not load products. Check that products.js is present and PRODUCT_LIST is defined.';
     return;
   }
 

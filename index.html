@@ -5,17 +5,18 @@
 
   FILES
   ─────
-  index.html    — this file (markup + README)
-  styles.css    — all visual styles (mobile-first)
-  app.js        — all logic (state, rendering, submit)
-  products.json — product list (edit this to add products)
+  index.html   — this file (markup + README)
+  styles.css   — all visual styles (mobile-first)
+  app.js       — all logic (state, rendering, submit)
+  products.js  — product list (edit this to add/remove products)
 
   HOW TO ADD PRODUCTS
   ───────────────────
-  Edit products.json. Each item needs:
-    { "id": "unique-id", "title": "Name", "url": "https://…", "image": "https://…" }
-  IDs must be stable — never change a product's id or progress breaks.
+  Edit products.js. Each item in the PRODUCT_LIST array needs:
+    { id: "unique-id", title: "Name", url: "https://…", image: "https://…" }
+  IDs must be stable — never change an id once set or progress breaks.
   New products are automatically shown to users who haven't seen them.
+  Works when opened directly from the filesystem (no server needed).
 
   HOW TO DEPLOY TO GITHUB PAGES
   ──────────────────────────────
@@ -24,9 +25,6 @@
   3. Set Source to "Deploy from a branch", pick main / root.
   4. Save. GitHub Pages URL will appear (e.g. https://yourname.github.io/repo/).
   5. Share that URL with the person using the app.
-  Note: fetch('./products.json') requires HTTP — it does NOT work when
-        opening index.html directly from the filesystem. Use GitHub Pages
-        or a local server (e.g. VS Code Live Server) for testing.
 
   HOW TO SET UP GOOGLE APPS SCRIPT
   ──────────────────────────────────
@@ -118,6 +116,7 @@
 
   </main>
 
+  <script src="products.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
