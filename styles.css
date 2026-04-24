@@ -190,7 +190,7 @@ a {
 .intro-card-stage {
   flex: 0 1 320px;
   position: relative;
-  margin: 22px 12px 18px;
+  margin: 22px 12px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,7 +270,7 @@ a {
 .intro-copy {
   position: relative;
   z-index: 1;
-  margin-top: auto;
+  margin-top: 0;
 }
 
 .intro-kicker {
@@ -306,7 +306,7 @@ a {
 }
 
 .intro-actions {
-  padding-top: 18px;
+  padding-top: 12px;
   position: relative;
   z-index: 1;
 }
@@ -365,7 +365,7 @@ a {
 }
 
 .discover-card-zone {
-  margin-top: 0;
+  margin-top: 50px;
   position: relative;
   min-height: calc(100dvh - 222px);
 }
@@ -494,7 +494,7 @@ a {
   display: flex;
   justify-content: center;
   gap: 16px;
-  margin-top: -28px;
+  margin-top: -18px;
   position: relative;
   z-index: 2;
 }
@@ -902,7 +902,7 @@ a {
 .bottom-nav {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  bottom: 28px;
   transform: translateX(-50%);
   width: min(calc(100% - 28px), 400px);
   min-height: 96px;

@@ -375,7 +375,7 @@ function renderLikesView() {
   likesList.appendChild(
     buildLikesSection(
       'Super Likes',
-      'Your strongest picks all in one place.',
+      'If you like it so much, I will think about it',
       getProductsForAction('super_like'),
       'No super likes yet'
     )
