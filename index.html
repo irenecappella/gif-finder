@@ -43,64 +43,39 @@
       <h1 class="topbar-title">GiftFinder</h1>
     </header>
 
-    <section id="discoverView" class="view view-active">
-      <div class="hero hero-discover">
-        <h2 class="hero-title">Welcome Tamara!</h2>
-        <p class="hero-copy">Lets help your loved ones find the perfect gift for you.</p>
+    <section id="discoverView" class="view view-active view-discover">
+      <div class="discover-card-zone" aria-live="polite">
+        <div id="loadingState" class="status-card">
+          <div class="spinner"></div>
+          <p>Loading gifts...</p>
+        </div>
 
-        <div class="discover-card-zone" aria-live="polite">
-          <div id="loadingState" class="status-card">
-            <div class="spinner"></div>
-            <p>Loading gifts...</p>
+        <div id="productCard" class="product-card hidden">
+          <div class="stamp stamp-like" aria-hidden="true">LIKE</div>
+          <div class="stamp stamp-super-like" aria-hidden="true">SUPER</div>
+          <div class="stamp stamp-nope" aria-hidden="true">NOPE</div>
+
+          <img id="productImage" class="product-card-image" alt="" />
+          <div id="productNoImage" class="product-card-no-image hidden" aria-hidden="true">★</div>
+
+          <div class="product-card-overlay">
+            <h3 id="productTitle" class="product-card-title"></h3>
+            <p id="productSubtitle" class="product-card-subtitle"></p>
+            <a id="productLink" class="product-card-link" target="_blank" rel="noopener noreferrer">View product →</a>
           </div>
+        </div>
 
-          <div id="productCard" class="product-card hidden">
-            <div class="stamp stamp-like" aria-hidden="true">LIKE</div>
-            <div class="stamp stamp-super-like" aria-hidden="true">SUPER</div>
-            <div class="stamp stamp-nope" aria-hidden="true">NOPE</div>
+        <div id="emptyState" class="status-card hidden">
+          <h3>You reached the end</h3>
+          <p>No more products for now.</p>
+        </div>
 
-            <img id="productImage" class="product-card-image" alt="" />
-            <div id="productNoImage" class="product-card-no-image hidden" aria-hidden="true">★</div>
-
-            <div class="product-card-overlay">
-              <h3 id="productTitle" class="product-card-title"></h3>
-              <p id="productSubtitle" class="product-card-subtitle"></p>
-              <a id="productLink" class="product-card-link" target="_blank" rel="noopener noreferrer">View product →</a>
-            </div>
-          </div>
-
-          <div id="emptyState" class="status-card hidden">
-            <h3>You reached the end</h3>
-            <p>No more products for now.</p>
-          </div>
-
-          <div class="floating-actions">
-            <button id="nopeBtn" type="button" class="circle-action circle-nope" aria-label="Nope">✕</button>
-            <button id="superLikeBtn" type="button" class="circle-action circle-super" aria-label="Super Like">★</button>
-            <button id="likeBtn" type="button" class="circle-action circle-like" aria-label="Like">♥</button>
-          </div>
+        <div class="floating-actions">
+          <button id="nopeBtn" type="button" class="circle-action circle-nope" aria-label="Nope">✕</button>
+          <button id="superLikeBtn" type="button" class="circle-action circle-super" aria-label="Super Like">★</button>
+          <button id="likeBtn" type="button" class="circle-action circle-like" aria-label="Like">♥</button>
         </div>
       </div>
-
-      <section class="how-it-works">
-        <div class="section-kicker">How It Works</div>
-        <div class="instruction-list">
-          <div class="instruction-item">
-            <span class="instruction-badge is-green">→</span>
-            <p>Swipe <strong>right</strong> for gifts you love</p>
-          </div>
-          <div class="instruction-item">
-            <span class="instruction-badge is-red">←</span>
-            <p>Swipe <strong>left</strong> for ones you don't</p>
-          </div>
-          <div class="instruction-item">
-            <span class="instruction-badge is-purple">↑</span>
-            <p>Swipe <strong>up</strong> for a super like</p>
-          </div>
-        </div>
-      </section>
-
-      <button id="startJoyBtn" type="button" class="primary-cta">Start Finding Joy</button>
     </section>
 
     <section id="introScreen" class="intro-screen hidden" aria-live="polite">
@@ -162,7 +137,7 @@
         <h2 class="hero-title likes-title">Your Likes</h2>
         <p class="hero-copy">A curated collection of things that made you smile.</p>
       </div>
-      <section id="likesList" class="likes-grid"></section>
+      <section id="likesList" class="likes-sections"></section>
     </section>
 
     <section id="suggestView" class="view hidden">

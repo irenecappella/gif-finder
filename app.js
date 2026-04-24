@@ -155,14 +155,20 @@ function getPositiveProducts() {
     }));
 }
 
-function getFeaturedLike() {
-  const positive = getPositiveProducts();
-  return positive[0] || null;
-}
+function getProductsForAction(action) {
+  if (action === 'super_like') {
+    const ids = new Set(state.superLikedIds);
+    return allProducts.filter((product) => ids.has(product.id)).map((product) => ({
+      ...product,
+      action: 'super_like'
+    }));
+  }
 
-function getSecondaryLikes() {
-  const positive = getPositiveProducts();
-  return positive.slice(1);
+  const ids = new Set(state.likedIds);
+  return allProducts.filter((product) => ids.has(product.id)).map((product) => ({
+    ...product,
+    action: 'like'
+  }));
 }
 
 function productTitle(product) {
@@ -248,10 +254,12 @@ function markIntroSeen() {
 function showIntro() {
   el('introScreen')?.classList.remove('hidden');
   el('matchOverlay')?.classList.add('hidden');
+  document.body.classList.add('has-intro');
 }
 
 function hideIntro() {
   el('introScreen')?.classList.add('hidden');
+  document.body.classList.remove('has-intro');
 }
 
 function createMediaNode(product, imageClass, fallbackClass, fallbackText) {
@@ -270,61 +278,37 @@ function createMediaNode(product, imageClass, fallbackClass, fallbackText) {
   return fallback;
 }
 
-function buildFeaturedLike(product) {
+function buildLikesCard(product) {
   const card = document.createElement('article');
-  card.className = 'likes-featured-card';
-
-  const media = createMediaNode(product, 'likes-featured-image', 'likes-featured-fallback', '★');
-  card.appendChild(media);
-
-  const overlay = document.createElement('div');
-  overlay.className = 'likes-featured-overlay';
-
-  const title = document.createElement('h3');
-  title.className = 'likes-featured-title';
-  title.textContent = productTitle(product);
-  overlay.appendChild(title);
-
-  const brand = document.createElement('p');
-  brand.className = 'likes-featured-brand';
-  brand.textContent = productBrand(product);
-  overlay.appendChild(brand);
-
-  const badge = document.createElement('span');
-  badge.className = product.action === 'super_like' ? 'likes-heart-badge is-super' : 'likes-heart-badge';
-  badge.textContent = product.action === 'super_like' ? '★' : '♥';
-  overlay.appendChild(badge);
-
-  card.appendChild(overlay);
-  return card;
-}
-
-function buildCompactLike(product) {
-  const card = document.createElement('article');
-  card.className = 'likes-compact-card';
+  card.className = 'likes-card';
 
   const mediaWrap = document.createElement('div');
-  mediaWrap.className = 'likes-compact-media';
-  mediaWrap.appendChild(createMediaNode(product, 'likes-compact-image', 'likes-compact-fallback', '★'));
+  mediaWrap.className = 'likes-card-media';
+  mediaWrap.appendChild(createMediaNode(product, 'likes-card-image', 'likes-card-fallback', '★'));
   card.appendChild(mediaWrap);
 
   const body = document.createElement('div');
-  body.className = 'likes-compact-body';
+  body.className = 'likes-card-body';
 
-  const category = document.createElement('p');
-  category.className = 'likes-category';
-  category.textContent = product.action === 'super_like' ? 'Super Like' : 'Gift Pick';
-  body.appendChild(category);
+  const topRow = document.createElement('div');
+  topRow.className = 'likes-card-top';
+
+  const brand = document.createElement('p');
+  brand.className = 'likes-card-brand';
+  brand.textContent = productBrand(product);
+  topRow.appendChild(brand);
+
+  const badge = document.createElement('span');
+  badge.className = product.action === 'super_like' ? 'likes-pill is-super' : 'likes-pill';
+  badge.textContent = product.action === 'super_like' ? 'Super Like' : 'Like';
+  topRow.appendChild(badge);
+
+  body.appendChild(topRow);
 
   const title = document.createElement('h3');
   title.className = 'likes-card-title';
   title.textContent = productTitle(product);
   body.appendChild(title);
-
-  const brand = document.createElement('p');
-  brand.className = 'likes-card-brand';
-  brand.textContent = productBrand(product);
-  body.appendChild(brand);
 
   const link = document.createElement('a');
   link.className = 'likes-card-link';
@@ -338,39 +322,41 @@ function buildCompactLike(product) {
   return card;
 }
 
-function buildWideLike(product) {
-  const card = document.createElement('article');
-  card.className = 'likes-wide-card';
+function buildLikesSection(titleText, descriptionText, items, emptyText) {
+  const section = document.createElement('section');
+  section.className = 'likes-section';
 
-  const media = document.createElement('div');
-  media.className = 'likes-wide-media';
-  media.appendChild(createMediaNode(product, 'likes-wide-image', 'likes-wide-fallback', '★'));
-  card.appendChild(media);
-
-  const body = document.createElement('div');
-  body.className = 'likes-wide-body';
+  const header = document.createElement('div');
+  header.className = 'likes-section-header';
 
   const title = document.createElement('h3');
-  title.className = 'likes-wide-title';
-  title.textContent = productTitle(product);
-  body.appendChild(title);
+  title.className = 'likes-section-title';
+  title.textContent = titleText;
+  header.appendChild(title);
 
-  const brand = document.createElement('p');
-  brand.className = 'likes-wide-brand';
-  brand.textContent = productBrand(product);
-  body.appendChild(brand);
+  const copy = document.createElement('p');
+  copy.className = 'likes-section-copy';
+  copy.textContent = descriptionText;
+  header.appendChild(copy);
 
-  card.appendChild(body);
+  section.appendChild(header);
 
-  const action = document.createElement('a');
-  action.className = 'likes-wide-action';
-  action.href = product.url;
-  action.target = '_blank';
-  action.rel = 'noopener noreferrer';
-  action.textContent = '↗';
-  card.appendChild(action);
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'likes-empty-state';
+    empty.innerHTML = `<h3>${emptyText}</h3><p>Start swiping in Discover to build this list.</p>`;
+    section.appendChild(empty);
+    return section;
+  }
 
-  return card;
+  const grid = document.createElement('div');
+  grid.className = 'likes-card-grid';
+  items.forEach((item) => {
+    grid.appendChild(buildLikesCard(item));
+  });
+  section.appendChild(grid);
+
+  return section;
 }
 
 function renderLikesView() {
@@ -378,31 +364,22 @@ function renderLikesView() {
   if (!likesList) return;
 
   likesList.innerHTML = '';
-
-  const featured = getFeaturedLike();
-  const secondary = getSecondaryLikes();
-
-  if (!featured) {
-    const empty = document.createElement('div');
-    empty.className = 'likes-empty-state';
-    empty.innerHTML = '<h3>No likes yet</h3><p>Start swiping in Discover to build your gift list.</p>';
-    likesList.appendChild(empty);
-    return;
-  }
-
-  likesList.appendChild(buildFeaturedLike(featured));
-
-  if (secondary.length > 0) {
-    const grid = document.createElement('div');
-    grid.className = 'likes-compact-grid';
-    secondary.slice(0, 4).forEach((product) => {
-      grid.appendChild(buildCompactLike(product));
-    });
-    likesList.appendChild(grid);
-  }
-
-  const wideSource = secondary[4] || featured;
-  likesList.appendChild(buildWideLike(wideSource));
+  likesList.appendChild(
+    buildLikesSection(
+      'Likes',
+      'The gifts you said yes to.',
+      getProductsForAction('like'),
+      'No likes yet'
+    )
+  );
+  likesList.appendChild(
+    buildLikesSection(
+      'Super Likes',
+      'Your strongest picks all in one place.',
+      getProductsForAction('super_like'),
+      'No super likes yet'
+    )
+  );
 }
 
 function resetCardSurface(card) {
@@ -688,7 +665,6 @@ function wireEvents() {
   el('superLikeBtn')?.addEventListener('click', superLike);
   el('nopeBtn')?.addEventListener('click', nope);
   el('submitSuggestionBtn')?.addEventListener('click', handleSuggestionSubmit);
-  el('startJoyBtn')?.addEventListener('click', () => setActiveView('discover'));
   el('introStartBtn')?.addEventListener('click', () => {
     markIntroSeen();
     hideIntro();
