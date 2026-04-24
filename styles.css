@@ -132,9 +132,10 @@ a {
   background: linear-gradient(165deg, var(--green-tint) 0%, var(--bg) 55%, var(--bg) 100%);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 14px;
   min-height: 100dvh;
-  padding: 34px 24px 28px;
+  padding: 30px 24px 22px;
   overflow: hidden;
   z-index: 32;
 }
@@ -188,9 +189,9 @@ a {
 }
 
 .intro-card-stage {
-  flex: 0 1 320px;
+  flex: 0 1 292px;
   position: relative;
-  margin: 22px 12px 10px;
+  margin: 12px 12px 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -306,7 +307,7 @@ a {
 }
 
 .intro-actions {
-  padding-top: 12px;
+  padding-top: 4px;
   position: relative;
   z-index: 1;
 }
@@ -361,7 +362,8 @@ a {
   font-size: 18px;
   line-height: 1.55;
   color: var(--text-soft);
-  max-width: 18ch;
+  max-width: 30ch;
+  margin-bottom: 20px;
 }
 
 .discover-card-zone {
@@ -902,7 +904,7 @@ a {
 .bottom-nav {
   position: fixed;
   left: 50%;
-  bottom: 28px;
+  bottom: 50px;
   transform: translateX(-50%);
   width: min(calc(100% - 28px), 400px);
   min-height: 96px;
@@ -954,12 +956,12 @@ a {
   }
 
   .intro-screen {
-    padding: 26px 20px 20px;
+    padding: 24px 20px 18px;
   }
 
   .intro-card-stage {
-    flex-basis: 280px;
-    margin: 14px 4px 12px;
+    flex-basis: 250px;
+    margin: 8px 4px 6px;
   }
 
   .mini-card {
