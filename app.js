@@ -367,7 +367,7 @@ function renderLikesView() {
   likesList.appendChild(
     buildLikesSection(
       'Likes',
-      'The gifts you said yes to.',
+      'These ones might options.',
       getProductsForAction('like'),
       'No likes yet'
     )
@@ -487,35 +487,6 @@ function like() {
   sendPositiveChoiceToGoogleSheet(product, 'like');
 }
 
-function showMatchOverlay(product) {
-  const overlay = el('matchOverlay');
-  const imageEl = el('matchImage');
-  const noImageEl = el('matchNoImage');
-  const titleEl = el('matchProductTitle');
-  const cardEl = overlay?.querySelector('.match-front-card');
-
-  if (product.image) {
-    if (imageEl) {
-      imageEl.src = product.image;
-      imageEl.classList.remove('hidden');
-    }
-    if (noImageEl) noImageEl.classList.add('hidden');
-  } else {
-    if (imageEl) imageEl.classList.add('hidden');
-    if (noImageEl) noImageEl.classList.remove('hidden');
-  }
-
-  if (cardEl) {
-    cardEl.style.background = product.tint || 'linear-gradient(180deg, rgba(9, 14, 18, 0.95), #000)';
-  }
-  if (titleEl) titleEl.textContent = productTitle(product);
-  if (overlay) overlay.classList.remove('hidden');
-}
-
-function hideMatchOverlay() {
-  el('matchOverlay')?.classList.add('hidden');
-}
-
 function superLike() {
   const product = getCurrentProduct();
   if (!product) return;
@@ -528,9 +499,8 @@ function superLike() {
   state.dislikedIds = removeId(state.dislikedIds, product.id);
 
   saveState();
-  animateCard('exit-up', render);
+  animateCard('exit-right', render);
   sendPositiveChoiceToGoogleSheet(product, 'super_like');
-  showMatchOverlay(product);
 }
 
 function handleSuggestionSubmit() {
@@ -571,7 +541,7 @@ function handleSuggestionSubmit() {
 }
 
 function onDragStart(e) {
-  if (!getCurrentProduct() || !el('matchOverlay')?.classList.contains('hidden')) return;
+  if (!getCurrentProduct()) return;
 
   isDragging = true;
   dragCurX = 0;
@@ -675,15 +645,6 @@ function wireEvents() {
     hideIntro();
     setActiveView('suggest');
   });
-  el('keepSwipingBtn')?.addEventListener('click', () => {
-    hideMatchOverlay();
-    setActiveView('discover');
-  });
-  el('viewLikesBtn')?.addEventListener('click', () => {
-    hideMatchOverlay();
-    setActiveView('likes');
-  });
-
   const suggestionInput = el('suggestionUrl');
   suggestionInput?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
