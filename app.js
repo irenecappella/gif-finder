@@ -251,6 +251,27 @@ function markIntroSeen() {
   localStorage.setItem(INTRO_SEEN_KEY, 'true');
 }
 
+function resetApp() {
+  const confirmed = window.confirm('Start over and clear all saved likes and progress?');
+  if (!confirmed) return;
+
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(INTRO_SEEN_KEY);
+
+  state = { ...DEFAULT_STATE };
+  currentView = 'discover';
+
+  const suggestionInput = el('suggestionUrl');
+  const suggestionStatus = el('suggestionStatus');
+  if (suggestionInput) suggestionInput.value = '';
+  if (suggestionStatus) suggestionStatus.className = 'suggest-status hidden';
+
+  hideIntro();
+  setActiveView('discover');
+  render();
+  showIntro();
+}
+
 function showIntro() {
   el('introScreen')?.classList.remove('hidden');
   el('matchOverlay')?.classList.add('hidden');
@@ -634,16 +655,12 @@ function wireEvents() {
   el('likeBtn')?.addEventListener('click', like);
   el('superLikeBtn')?.addEventListener('click', superLike);
   el('nopeBtn')?.addEventListener('click', nope);
+  el('resetAppBtn')?.addEventListener('click', resetApp);
   el('submitSuggestionBtn')?.addEventListener('click', handleSuggestionSubmit);
   el('introStartBtn')?.addEventListener('click', () => {
     markIntroSeen();
     hideIntro();
     setActiveView('discover');
-  });
-  el('introPersonalizeBtn')?.addEventListener('click', () => {
-    markIntroSeen();
-    hideIntro();
-    setActiveView('suggest');
   });
   const suggestionInput = el('suggestionUrl');
   suggestionInput?.addEventListener('keydown', (event) => {
