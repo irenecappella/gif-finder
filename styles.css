@@ -320,6 +320,76 @@ a {
   max-width: 300px;
 }
 
+.intro-instructions {
+  position: relative;
+  z-index: 1;
+  padding: 18px 16px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-sm);
+}
+
+.intro-instructions-title {
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--ink-soft);
+}
+
+.intro-instruction-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.intro-instruction-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.intro-instruction-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.intro-instruction-icon.is-nope {
+  color: var(--nope);
+  background: rgba(224, 107, 93, 0.12);
+}
+
+.intro-instruction-icon.is-super {
+  color: var(--superlike);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.intro-instruction-icon.is-like {
+  color: var(--green);
+  background: rgba(47, 107, 74, 0.12);
+}
+
+.intro-instruction-text {
+  font-size: 12px;
+  line-height: 1.28;
+  color: var(--ink-soft);
+}
+
+.intro-instruction-text strong {
+  display: inline;
+  font-size: 14px;
+}
+
 .intro-actions {
   padding-top: 4px;
   position: relative;
@@ -442,6 +512,7 @@ a {
   box-shadow: var(--shadow-lg);
   will-change: transform;
   touch-action: none;
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s ease;
 }
 
 .product-card::before {
@@ -515,6 +586,10 @@ a {
   z-index: 2;
 }
 
+.floating-actions.is-busy {
+  pointer-events: none;
+}
+
 .circle-action {
   width: 68px;
   height: 68px;
@@ -526,6 +601,11 @@ a {
   font-size: 34px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.circle-action:active {
+  transform: scale(0.96);
 }
 
 .circle-nope {
@@ -767,21 +847,23 @@ a {
 }
 
 .product-card.exit-right {
-  transition: transform 0.38s ease, opacity 0.35s ease;
   transform: translateX(130%) rotate(18deg) !important;
   opacity: 0;
 }
 
 .product-card.exit-left {
-  transition: transform 0.38s ease, opacity 0.35s ease;
   transform: translateX(-130%) rotate(-18deg) !important;
   opacity: 0;
 }
 
 .product-card.exit-up {
-  transition: transform 0.38s ease, opacity 0.35s ease;
   transform: translateY(-135%) scale(0.94) !important;
   opacity: 0;
+}
+
+.product-card.enter-card {
+  opacity: 0;
+  transform: translateY(14px) scale(0.985);
 }
 
 .product-card.snap-back {
@@ -976,6 +1058,18 @@ a {
   .intro-card-stage {
     flex-basis: 250px;
     margin: 8px 4px 6px;
+  }
+
+  .intro-instructions {
+    padding: 16px 12px;
+  }
+
+  .intro-instruction-grid {
+    gap: 6px;
+  }
+
+  .intro-instruction-text {
+    font-size: 11px;
   }
 
   .mini-card {

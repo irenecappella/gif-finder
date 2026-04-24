@@ -61,6 +61,8 @@ let dragStartY = 0;
 let dragCurX = 0;
 let dragCurY = 0;
 let isDragging = false;
+let isCardTransitioning = false;
+const preloadedImages = new Set();
 
 function el(id) {
   const node = document.getElementById(id);
@@ -132,6 +134,19 @@ function applyPalette() {
   root.style.setProperty('--superlike', activePalette.superlike);
   root.style.setProperty('--card-bg', activePalette.cardBg);
   root.style.setProperty('--nav-bg', activePalette.navBg);
+}
+
+function preloadImage(url) {
+  if (!url || preloadedImages.has(url)) return;
+  preloadedImages.add(url);
+  const img = new Image();
+  img.src = url;
+}
+
+function preloadUpcomingProducts() {
+  getDeck()
+    .slice(0, 3)
+    .forEach((product) => preloadImage(product.image));
 }
 
 function getDeck() {
@@ -447,6 +462,7 @@ function renderDiscoverView() {
     }
 
     if (emptyEl) emptyEl.classList.add('hidden');
+    preloadUpcomingProducts();
   } else {
     if (cardEl) cardEl.classList.add('hidden');
     if (emptyEl) emptyEl.classList.remove('hidden');
@@ -460,13 +476,40 @@ function render() {
 
 function animateCard(direction, callback) {
   const card = el('productCard');
-  if (!card) {
+  const actions = document.querySelector('.floating-actions');
+  if (!card || isCardTransitioning) {
     callback();
     return;
   }
 
-  card.classList.add(direction);
-  setTimeout(callback, 380);
+  isCardTransitioning = true;
+  actions?.classList.add('is-busy');
+
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    callback();
+
+    const nextCard = el('productCard');
+    if (nextCard && !nextCard.classList.contains('hidden')) {
+      nextCard.classList.add('enter-card');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          nextCard.classList.remove('enter-card');
+        });
+      });
+    }
+
+    actions?.classList.remove('is-busy');
+    isCardTransitioning = false;
+  };
+
+  card.addEventListener('transitionend', finish, { once: true });
+  requestAnimationFrame(() => {
+    card.classList.add(direction);
+  });
+  setTimeout(finish, 460);
 }
 
 function markSeen(product) {
@@ -481,7 +524,7 @@ function removeId(list, id) {
 
 function nope() {
   const product = getCurrentProduct();
-  if (!product) return;
+  if (!product || isCardTransitioning) return;
 
   markSeen(product);
   if (!state.dislikedIds.includes(product.id)) {
@@ -494,7 +537,7 @@ function nope() {
 
 function like() {
   const product = getCurrentProduct();
-  if (!product) return;
+  if (!product || isCardTransitioning) return;
 
   markSeen(product);
   if (!state.likedIds.includes(product.id)) {
@@ -510,7 +553,7 @@ function like() {
 
 function superLike() {
   const product = getCurrentProduct();
-  if (!product) return;
+  if (!product || isCardTransitioning) return;
 
   markSeen(product);
   if (!state.superLikedIds.includes(product.id)) {
@@ -562,7 +605,7 @@ function handleSuggestionSubmit() {
 }
 
 function onDragStart(e) {
-  if (!getCurrentProduct()) return;
+  if (!getCurrentProduct() || isCardTransitioning) return;
 
   isDragging = true;
   dragCurX = 0;
@@ -707,6 +750,7 @@ function init() {
     return;
   }
 
+  preloadUpcomingProducts();
   setActiveView(currentView);
   render();
   if (shouldShowIntro()) {
