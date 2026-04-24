@@ -39,6 +39,8 @@
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkclQu61_c-uQuGW4e4ufm5VTcEk9950Xc88UGQjl4_rMr3rbcnfq52JqlHBmco0AS/exec';
 const STORAGE_KEY = 'giftfinder-state';
+const INTRO_SEEN_KEY = 'giftfinder-intro-seen';
+const DEFAULT_PALETTE = 'forest';
 
 const DEFAULT_STATE = {
   seenIds: [],
@@ -53,6 +55,7 @@ const SUPER_LIKE_THRESHOLD = 70;
 let allProducts = [];
 let state = { ...DEFAULT_STATE };
 let currentView = 'discover';
+let activePalette = window.PALETTES?.[DEFAULT_PALETTE] || null;
 let dragStartX = 0;
 let dragStartY = 0;
 let dragCurX = 0;
@@ -109,6 +112,28 @@ function loadProducts() {
   return valid;
 }
 
+function applyPalette() {
+  if (!activePalette) return;
+
+  const root = document.documentElement;
+  root.style.setProperty('--bg', activePalette.bg);
+  root.style.setProperty('--bg-deep', activePalette.bgDeep);
+  root.style.setProperty('--ink', activePalette.ink);
+  root.style.setProperty('--ink-soft', activePalette.inkSoft);
+  root.style.setProperty('--muted', activePalette.muted);
+  root.style.setProperty('--green', activePalette.green);
+  root.style.setProperty('--green-deep', activePalette.greenDeep);
+  root.style.setProperty('--green-soft', activePalette.greenSoft);
+  root.style.setProperty('--green-tint', activePalette.greenTint);
+  root.style.setProperty('--purple', activePalette.purple);
+  root.style.setProperty('--purple-soft', activePalette.purpleSoft);
+  root.style.setProperty('--like', activePalette.like);
+  root.style.setProperty('--nope', activePalette.nope);
+  root.style.setProperty('--superlike', activePalette.superlike);
+  root.style.setProperty('--card-bg', activePalette.cardBg);
+  root.style.setProperty('--nav-bg', activePalette.navBg);
+}
+
 function getDeck() {
   const seen = new Set(state.seenIds);
   return allProducts.filter((product) => !seen.has(product.id));
@@ -145,6 +170,7 @@ function productTitle(product) {
 }
 
 function productBrand(product) {
+  if (product.brand) return product.brand;
   try {
     const hostname = new URL(product.url).hostname.replace(/^www\./, '');
     const label = hostname.split('.')[0] || 'GiftFinder';
@@ -209,6 +235,23 @@ function setActiveView(viewName) {
     const isActive = button.dataset.view === viewName;
     button.classList.toggle('nav-item-active', isActive);
   });
+}
+
+function shouldShowIntro() {
+  return localStorage.getItem(INTRO_SEEN_KEY) !== 'true';
+}
+
+function markIntroSeen() {
+  localStorage.setItem(INTRO_SEEN_KEY, 'true');
+}
+
+function showIntro() {
+  el('introScreen')?.classList.remove('hidden');
+  el('matchOverlay')?.classList.add('hidden');
+}
+
+function hideIntro() {
+  el('introScreen')?.classList.add('hidden');
 }
 
 function createMediaNode(product, imageClass, fallbackClass, fallbackText) {
@@ -399,8 +442,9 @@ function renderDiscoverView() {
         if (noImageEl) noImageEl.classList.remove('hidden');
       }
 
+      cardEl.style.background = current.tint || 'var(--card-bg)';
       if (titleEl) titleEl.textContent = productTitle(current);
-      if (subtitleEl) subtitleEl.textContent = `Premium gift pick from ${productBrand(current)}`;
+      if (subtitleEl) subtitleEl.textContent = productBrand(current);
       if (linkEl) linkEl.href = current.url || '#';
     }
 
@@ -471,6 +515,7 @@ function showMatchOverlay(product) {
   const imageEl = el('matchImage');
   const noImageEl = el('matchNoImage');
   const titleEl = el('matchProductTitle');
+  const cardEl = overlay?.querySelector('.match-front-card');
 
   if (product.image) {
     if (imageEl) {
@@ -483,6 +528,9 @@ function showMatchOverlay(product) {
     if (noImageEl) noImageEl.classList.remove('hidden');
   }
 
+  if (cardEl) {
+    cardEl.style.background = product.tint || 'linear-gradient(180deg, rgba(9, 14, 18, 0.95), #000)';
+  }
   if (titleEl) titleEl.textContent = productTitle(product);
   if (overlay) overlay.classList.remove('hidden');
 }
@@ -641,6 +689,16 @@ function wireEvents() {
   el('nopeBtn')?.addEventListener('click', nope);
   el('submitSuggestionBtn')?.addEventListener('click', handleSuggestionSubmit);
   el('startJoyBtn')?.addEventListener('click', () => setActiveView('discover'));
+  el('introStartBtn')?.addEventListener('click', () => {
+    markIntroSeen();
+    hideIntro();
+    setActiveView('discover');
+  });
+  el('introPersonalizeBtn')?.addEventListener('click', () => {
+    markIntroSeen();
+    hideIntro();
+    setActiveView('suggest');
+  });
   el('keepSwipingBtn')?.addEventListener('click', () => {
     hideMatchOverlay();
     setActiveView('discover');
@@ -678,6 +736,7 @@ function wireEvents() {
 
 function init() {
   loadState();
+  applyPalette();
   wireEvents();
 
   try {
@@ -696,6 +755,9 @@ function init() {
 
   setActiveView(currentView);
   render();
+  if (shouldShowIntro()) {
+    showIntro();
+  }
 }
 
 init();
