@@ -37,7 +37,7 @@
   real rows into the sheet.
 */
 
-const SCRIPT_URL = 'PASTE_GOOGLE_APPS_SCRIPT_URL_HERE';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkclQu61_c-uQuGW4e4ufm5VTcEk9950Xc88UGQjl4_rMr3rbcnfq52JqlHBmco0AS/exec';
 const STORAGE_KEY = 'giftfinder-state';
 
 const DEFAULT_STATE = {
